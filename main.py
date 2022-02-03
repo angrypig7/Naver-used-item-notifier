@@ -1,9 +1,9 @@
+import logging
 import requests
-# import bs4
 from bs4 import BeautifulSoup
 from urllib import parse
 
-keyword = "키크론 K3"
+keyword = "고양이 간식"
 options = {
     "where": "article",
     "ie": "utf8",
@@ -22,8 +22,11 @@ link_naver_search = "https://search.naver.com/search.naver?"
 def main():
     print("Naver-used-item-notifier")
 
+    logging.basicConfig(filename="python.log", filemode="w", level=logging.DEBUG)
+    # debug, info, warning, error, critical
+
     link = formatLink(link_naver_search, keyword)
-    print("LOG: link to parse: {}".format(link))
+    logging.info("link to parse: {}".format(link))
 
     webGet(link)
 
@@ -40,12 +43,23 @@ def formatLink(link_arg, keyword_arg):
 
 def webGet(link_arg):
     req = requests.get(link_arg)
-    html = req.text
-    soup = BeautifulSoup(html, 'html.parser')
+    logging.info("req: {}\n".format(str(req)))
 
-    print("LOG: req: {}".format(req))
-    # print("LOG: html: {}".format(html))
-    print("LOG: soup: {}".format(soup))
+    html = req.text
+    # logging.debug("html: {}\n".format(str(html)))
+
+    soup = BeautifulSoup(html, 'html.parser')
+    # logging.debug("soup: {}\n".format(str(soup)))
+
+    res_list = soup.select(
+        '#_view_review_body_html > div > more-contents > div > ul'
+    )
+    # logging.debug("res_list: {}\n".format(str(res_list).encode("utf-8")))
+
+    for item in res_list:
+        print(item.text)
+        print("\nPRINT\n")
+        # logging.debug(str(item.text).encode("utf-8"))
 
 
 if __name__ == "__main__":
