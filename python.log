@@ -1,5 +1,0 @@
-INFO:root:link to parse: https://search.naver.com/search.naver?where=article&ie=utf8&prdtype=4&t=0&st=date&srchby=text&dup_remove=1&sm=tap_opt&nso=so%3Add%2Cp%3Aall%2Ca%3Aall&nso_open=1&rev=44&query=%EA%B3%A0%EC%96%91%EC%9D%B4+%EA%B0%84%EC%8B%9D
-DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): search.naver.com:443
-DEBUG:urllib3.connectionpool:https://search.naver.com:443 "GET /search.naver?where=article&ie=utf8&prdtype=4&t=0&st=date&srchby=text&dup_remove=1&sm=tap_opt&nso=so%3Add%2Cp%3Aall%2Ca%3Aall&nso_open=1&rev=44&query=%EA%B3%A0%EC%96%91%EC%9D%B4+%EA%B0%84%EC%8B%9D HTTP/1.1" 200 None
-INFO:root:req: <Response [200]>
-
