@@ -6,7 +6,10 @@ from urllib import parse
 from notify_run import Notify
 
 keyword = '고양이 간식'
-options = {
+flag_mobile = True
+flag_strip_url = False
+
+options_desktop = {
     'where': 'article',
     'ie': 'utf8',
     'prdtype': 4,
@@ -19,7 +22,23 @@ options = {
     'nso_open': 1,
     'rev': 44
 }
-link_naver_search = 'https://search.naver.com/search.naver?'
+options_mobile = {
+    'abuse': '0',
+    'date_option': '0',
+    'display': '0',
+    'nso_open': '1',
+    'prdtype': '4',
+    'query': '고양이 간식',
+    'sm': 'mtb_opt',
+    'st': 'date',
+    'start': '1',
+    'stnm': 'rel',
+    'where': 'm_article',
+    'opt_tab': '0',
+    'nso': 'so:dd,p:all',
+}
+link_naver_search_desktop = 'https://search.naver.com/search.naver?'
+link_naver_search_mobile = 'https://m.search.naver.com/search.naver?'
 
 logger = logging.getLogger("root")
 
@@ -30,20 +49,29 @@ class MyClass:
     def __init__(self):
         self.link = list()
         self.title = list()
+        self.price = list()
         self.text = list()
 
-parseData = MyClass()
+itemData = MyClass()
 
 def main():
     setLogging()
 
     logger.info('Naver-used-item-notifier')
+    logger.debug('Mobile version set as {}'.format(str(flag_mobile)))
     # debug, info, warning, error, critical
 
-    link = formatLink(link_naver_search, keyword)
-    logger.info('link: {}'.format(link))
+    link = ''
+    if(flag_mobile == True):
+        link = formatLink(link_naver_search_mobile, options_mobile, keyword)
+    else:
+        link = formatLink(link_naver_search_desktop, options_desktop, keyword)
 
-    getLink(parseData, link)
+    logger.info('Link: {}'.format(link))
+
+    getLink(itemData, link)
+
+    updateData(itemData)
 
 
 def setLogging():
@@ -63,33 +91,44 @@ def setLogging():
     logger.addHandler(fileHandler)
     logger.addHandler(streamHandler)
 
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     # logging.basicConfig(filename='python.log', filemode='w', level=logging.DEBUG)
 
-
-def formatLink(link_arg, keyword_arg):
+def formatLink(link_arg, options_arg, keyword_arg):
     url = ''
     # query = {'query': keyword_arg}
-    options['query'] = keyword_arg
+    options_arg['query'] = keyword_arg
     # url_params = parse.urlparse(url)
-    url_params = parse.urlencode(options, doseq=True)
+    url_params = parse.urlencode(options_arg, doseq=True)
     url = link_arg + str(url_params)
 
     return url
 
 def getLink(dataClass, link_arg):
-    req = requests.get(link_arg)
-    logger.info('req: {}\n'.format(str(req)))
+    res = requests.get(link_arg)
+    logger.debug('HTTP response: {}'.format(str(res)))
 
-    html = req.text
+    html = res.text
     soup = BeautifulSoup(html, 'html.parser')
 
     res_link = soup.find_all('a', 'thumb_single')
 
     for count in range(len(res_link)):
-        dataClass.link.append(res_link[count].get('href').split('?')[0])
-        logger.info('{}:{}'.format(count, dataClass.link[count]))
+        if flag_strip_url == True:
+            dataClass.link.append(res_link[count].get('href').split('?')[0])
+        else:
+            dataClass.link.append(res_link[count].get('href'))
+        logger.info('item {} link: {}'.format(count, dataClass.link[count]))
+
+def updateData(dataClass):
+    for i in range(len(dataClass.link)):
+        res = requests.get(dataClass.link[i])
+        logger.debug('item {} - res from {} : {}'.format(i, dataClass.link[i], str(res)))
+        html = res.text
+        soup = BeautifulSoup(html, 'html.parser')
+
+        pass
 
 
 if __name__ == '__main__':
