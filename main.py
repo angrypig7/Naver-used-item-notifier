@@ -3,6 +3,7 @@ import logging.handlers
 import requests
 from bs4 import BeautifulSoup
 from urllib import parse
+from notify_run import Notify
 
 keyword = '고양이 간식'
 options = {
@@ -22,6 +23,17 @@ link_naver_search = 'https://search.naver.com/search.naver?'
 
 logger = logging.getLogger("root")
 
+notify = Notify()
+# notify.send('asdf')
+
+class MyClass:
+    def __init__(self):
+        self.link = list()
+        self.title = list()
+        self.text = list()
+
+parseData = MyClass()
+
 def main():
     setLogging()
 
@@ -29,9 +41,9 @@ def main():
     # debug, info, warning, error, critical
 
     link = formatLink(link_naver_search, keyword)
-    logger.info('link to parse: {}'.format(link))
+    logger.info('link: {}'.format(link))
 
-    webGet(link)
+    getLink(parseData, link)
 
 
 def setLogging():
@@ -66,28 +78,18 @@ def formatLink(link_arg, keyword_arg):
 
     return url
 
-def webGet(link_arg):
+def getLink(dataClass, link_arg):
     req = requests.get(link_arg)
     logger.info('req: {}\n'.format(str(req)))
 
     html = req.text
-    # logger.debug('html: {}\n'.format(str(html)))
-
     soup = BeautifulSoup(html, 'html.parser')
-    # logger.debug('soup: {}\n'.format(str(soup)))
 
-    # res_list = soup.select(
-    #     '#_view_review_body_html > div > more-contents > div > ul'
-    # )
-    res_list = soup.select('.total_area')
+    res_link = soup.find_all('a', 'thumb_single')
 
-    count = 1
-    for item in res_list:
-        logger.info('List: {}'.format(count))
-        logger.debug(type(item))
-        count += 1
-        logger.info(item.text)
-        # logger.debug(str(item.text).encode('utf-8'))
+    for count in range(len(res_link)):
+        dataClass.link.append(res_link[count].get('href').split('?')[0])
+        logger.info('{}:{}'.format(count, dataClass.link[count]))
 
 
 if __name__ == '__main__':
