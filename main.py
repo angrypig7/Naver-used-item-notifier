@@ -12,15 +12,16 @@ flag_strip_url = False
 options_desktop = {
     'where': 'article',
     'ie': 'utf8',
-    'prdtype': 4,
-    't': 0,
+    'prdtype': '4',
+    't': '0',
     'st': 'date',
     'srchby': 'text',
-    'dup_remove': 1,
+    'dup_remove': '1',
     'sm': 'tap_opt',
     'nso': 'so:dd,p:all,a:all',
-    'nso_open': 1,
-    'rev': 44
+    'nso_open': '1',
+    'rev': '44',
+    'query': ''
 }
 options_mobile = {
     'abuse': '0',
@@ -36,9 +37,16 @@ options_mobile = {
     'where': 'm_article',
     'opt_tab': '0',
     'nso': 'so:dd,p:all',
+    'query': ''
+}
+options_naver_cafe_api = {
+    'useCafeId': 'false',
+    'art': '',  # item ID
+    'buid': ''  # no idea what it is, works with this field left out
 }
 link_naver_search_desktop = 'https://search.naver.com/search.naver?'
 link_naver_search_mobile = 'https://m.search.naver.com/search.naver?'
+link_naver_cafe_api = 'https://apis.naver.com/cafe-web/cafe-articleapi/v2/cafes/companhia/articles/'
 
 logger = logging.getLogger("root")
 
@@ -48,6 +56,8 @@ notify = Notify()
 class MyClass:
     def __init__(self):
         self.link = list()
+        self.itemID = list()  # item ID for browsing naver cafe API
+        self.art = list()  # no idea WTF this is, but required to browse naver cafe API
         self.title = list()
         self.price = list()
         self.text = list()
@@ -63,9 +73,9 @@ def main():
 
     link = ''
     if(flag_mobile == True):
-        link = formatLink(link_naver_search_mobile, options_mobile, keyword)
+        link = formatSearchLink(link_naver_search_mobile, options_mobile, keyword)
     else:
-        link = formatLink(link_naver_search_desktop, options_desktop, keyword)
+        link = formatSearchLink(link_naver_search_desktop, options_desktop, keyword)
 
     logger.info('Link: {}'.format(link))
 
@@ -75,6 +85,8 @@ def main():
 
 
 def setLogging():
+    """logging module setup"""
+
     # formatter = logging.Formatter('[%(levelname)8s|%(filename)s:%(lineno)s] %(asctime)s > %(message)s')
     # formatter = logging.Formatter('[%(levelname)s|%(filename)s:%(funcName)s:%(lineno)s] %(asctime)s.%(msecs)d > %(message)s', '%H:%M:%S')
     formatter = logging.Formatter('[%(levelname)s|%(funcName)s] %(asctime)s.%(msecs)d > %(message)s', '%H:%M:%S')
@@ -95,7 +107,9 @@ def setLogging():
 
     # logging.basicConfig(filename='python.log', filemode='w', level=logging.DEBUG)
 
-def formatLink(link_arg, options_arg, keyword_arg):
+def formatSearchLink(link_arg, options_arg, keyword_arg):
+    """returns URL containing list of items available"""
+
     url = ''
     # query = {'query': keyword_arg}
     options_arg['query'] = keyword_arg
@@ -105,7 +119,16 @@ def formatLink(link_arg, options_arg, keyword_arg):
 
     return url
 
+def formatAPILink(link_arg, options_arg, item_arg, art_arg):
+    """returns URL of naver cafe API containing detailed info of each item"""
+    
+    url = ''
+
+    return url
+
 def getLink(dataClass, link_arg):
+    """browses the given link, saves itemID and link containing details of each item"""
+    
     res = requests.get(link_arg)
     logger.debug('HTTP response: {}'.format(str(res)))
 
@@ -115,6 +138,7 @@ def getLink(dataClass, link_arg):
     res_link = soup.find_all('a', 'thumb_single')
 
     for count in range(len(res_link)):
+        dataClass.itemID.append(res_link[0].get('href').split('/')[-1].split('?')[0])  # item ID for browsing naver cafe API
         if flag_strip_url == True:
             dataClass.link.append(res_link[count].get('href').split('?')[0])
         else:
@@ -122,7 +146,11 @@ def getLink(dataClass, link_arg):
         logger.info('item {} link: {}'.format(count, dataClass.link[count]))
 
 def updateData(dataClass):
+    """browses every dataClass.link listed and saves title, price, text of each item"""
+    
     for i in range(len(dataClass.link)):
+        url = formatAPILink(link_naver_cafe_api, options_naver_cafe_api, dataClass, dataClass.itemID)
+
         res = requests.get(dataClass.link[i])
         logger.debug('item {} - res from {} : {}'.format(i, dataClass.link[i], str(res)))
         html = res.text
