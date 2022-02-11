@@ -7,7 +7,6 @@ from notify_run import Notify
 
 keyword = '고양이 간식'
 flag_mobile = True
-flag_strip_url = False
 
 options_desktop = {
     'where': 'article',
@@ -29,7 +28,6 @@ options_mobile = {
     'display': '0',
     'nso_open': '1',
     'prdtype': '4',
-    'query': '고양이 간식',
     'sm': 'mtb_opt',
     'st': 'date',
     'start': '1',
@@ -41,12 +39,12 @@ options_mobile = {
 }
 options_naver_cafe_api = {
     'useCafeId': 'false',
-    'art': '',  # item ID
-    'buid': ''  # no idea what it is, works with this field left out
+    'art': ''  # no idea what it is, works with this field left out
+    # 'buid': ''  # no idea what it is, works with this field left out
 }
 link_naver_search_desktop = 'https://search.naver.com/search.naver?'
 link_naver_search_mobile = 'https://m.search.naver.com/search.naver?'
-link_naver_cafe_api = 'https://apis.naver.com/cafe-web/cafe-articleapi/v2/cafes/companhia/articles/'
+link_naver_cafe_api = 'https://apis.naver.com/cafe-web/cafe-articleapi/v2/cafes/{}/articles/'
 
 logger = logging.getLogger("root")
 
@@ -55,9 +53,12 @@ notify = Notify()
 
 class MyClass:
     def __init__(self):
-        self.link = list()
         self.itemID = list()  # item ID for browsing naver cafe API
-        self.art = list()  # no idea WTF this is, but required to browse naver cafe API
+        self.art = list()  # no idea WTF this is
+        # self.buid = list()  # no idea WTF this is
+        self.cafeName = list()  # used to assemble API link
+        self.link = list()  # URL of each item
+        self.linkAPI = list()  # URL of naver cafe API for each item
         self.title = list()
         self.price = list()
         self.text = list()
@@ -111,18 +112,25 @@ def formatSearchLink(link_arg, options_arg, keyword_arg):
     """returns URL containing list of items available"""
 
     url = ''
-    # query = {'query': keyword_arg}
     options_arg['query'] = keyword_arg
-    # url_params = parse.urlparse(url)
     url_params = parse.urlencode(options_arg, doseq=True)
     url = link_arg + str(url_params)
 
     return url
 
-def formatAPILink(link_arg, options_arg, item_arg, art_arg):
+def formatAPILink(link_arg, options_arg, item_arg, art_arg, cafeName_arg):
     """returns URL of naver cafe API containing detailed info of each item"""
+
+    link_arg = link_arg.format(cafeName_arg)
+    link_arg += item_arg
+    link_arg += '?'
     
     url = ''
+    options_arg['art'] = art_arg
+    # options_arg['buid'] = item_arg
+
+    url_params = parse.urlencode(options_arg, doseq=True)
+    url = link_arg + str(url_params)
 
     return url
 
@@ -137,22 +145,34 @@ def getLink(dataClass, link_arg):
 
     res_link = soup.find_all('a', 'thumb_single')
 
-    for count in range(len(res_link)):
-        dataClass.itemID.append(res_link[0].get('href').split('/')[-1].split('?')[0])  # item ID for browsing naver cafe API
+    for i in range(len(res_link)):
+        dataClass.itemID.append(res_link[i].get('href').split('/')[-1].split('?')[0])  # 'itemID' for browsing naver cafe API
+        dataClass.art.append(res_link[i].get('href').split('/')[-1].split('?')[-1].split('art=')[-1])  # 'art' value requried to access naver cafe API
+        dataClass.cafeName.append(res_link[i].get('href').split('/')[3])
+        dataClass.linkAPI.append(formatAPILink(link_naver_cafe_api, options_naver_cafe_api, dataClass.itemID[i], dataClass.art[i], dataClass.cafeName[i]))
+
+        flag_strip_url = False  # if True, URL only contains itemID shortening its length, could remove essential fields too
         if flag_strip_url == True:
-            dataClass.link.append(res_link[count].get('href').split('?')[0])
+            dataClass.link.append(res_link[i].get('href').split('?')[0])
         else:
-            dataClass.link.append(res_link[count].get('href'))
-        logger.info('item {} link: {}'.format(count, dataClass.link[count]))
+            dataClass.link.append(res_link[i].get('href'))
+        
+        logger.debug('item {}: {{'.format(i))
+        logger.debug('  link: {}'.format(dataClass.link[i]))
+        logger.debug('  API link: {}'.format(dataClass.linkAPI[i]))
+        logger.debug('  itemID: {}'.format(dataClass.itemID[i]))
+        logger.debug('  art: {}'.format(dataClass.art[i]))
+        logger.debug('}')
+        logger.debug('')
 
 def updateData(dataClass):
     """browses every dataClass.link listed and saves title, price, text of each item"""
     
     for i in range(len(dataClass.link)):
-        url = formatAPILink(link_naver_cafe_api, options_naver_cafe_api, dataClass, dataClass.itemID)
+        url = dataClass.linkAPI[i]
 
-        res = requests.get(dataClass.link[i])
-        logger.debug('item {} - res from {} : {}'.format(i, dataClass.link[i], str(res)))
+        res = requests.get(url)
+        logger.debug('item {} - res from {} : {}'.format(i, url, str(res)))
         html = res.text
         soup = BeautifulSoup(html, 'html.parser')
 
